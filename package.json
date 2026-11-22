@@ -4,6 +4,7 @@
   "private": true,
   "description": "CASTONE automated API fuzz testing tool",
   "scripts": {
+    "build": "node scripts/build.js",
     "proxy": "node server.js",
     "test": "node --test"
   },

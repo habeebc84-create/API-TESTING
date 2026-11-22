@@ -24,7 +24,7 @@ python3 -m http.server 8000
 Then open http://localhost:8000
 
 **Option C — Deploy to Vercel (1-click):**
-Push this repo to GitHub and import it in [Vercel](https://vercel.com). No build step required — `vercel.json` is included. Your app will be live at `https://<project>.vercel.app`.
+Push this repo to GitHub and import it in [Vercel](https://vercel.com). The included build script copies the SPA assets into Vercel's configured `public` output directory. Your app will be live at `https://<project>.vercel.app`.
 
 **Option D — CORS-free real-API testing:** run the optional proxy so browser CORS doesn't block real APIs:
 ```bash
