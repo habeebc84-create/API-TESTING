@@ -84,3 +84,19 @@ test('analyzer reports server errors, information disclosure, and reflected XSS'
   assert.ok(findings.some(f => f.type === 'Information Disclosure'));
   assert.ok(findings.some(f => f.type === 'Cross-Site Scripting Risk'));
 });
+
+test('missing-value analyzer safely renders undefined payloads instead of crashing', () => {
+  const app = loadApp();
+  const ep = { id:'e1', name:'users', url:'https://example.test/users', expected:200 };
+  const findings = app.analyzeCase({ id:'c1', strategy:'null/missing', field:'body.name', mutatedValue:undefined, input:{}, status:200, timeMs:10, responseBody:{ok:true}, error:null }, ep);
+  assert.ok(findings.some(f => f.type === 'Missing Validation'));
+  assert.match(findings.find(f => f.type === 'Missing Validation').evidence, /undefined/);
+});
+
+test('mobile navigation exposes all views and accessible labels', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  assert.match(html, /<nav class="mobile-nav" aria-label="Main navigation">/);
+  for (const view of ['dashboard','endpoints','fuzz','reports','demoapi','help']) {
+    assert.match(html, new RegExp(`class="mobile-nav-item[^\"]*" data-view="${view}"`));
+  }
+});

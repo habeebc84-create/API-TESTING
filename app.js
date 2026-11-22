@@ -57,6 +57,7 @@ function buildUrl(base, queryObj){
 }
 function fmtTime(ms){ if(ms==null) return '—'; return ms < 1000 ? Math.round(ms)+'ms' : (ms/1000).toFixed(2)+'s'; }
 function statusClass(s){ if(s>=200&&s<300) return 'status-ok'; if(s>=400&&s<500) return 'status-warn'; if(s>=500) return 'status-err'; return ''; }
+function fmtValue(value, space){ const text=JSON.stringify(value, null, space); return text===undefined ? String(value) : text; }
 
 /* ---------- Demo Target API (built-in vulnerable simulator) ---------- */
 const DEMO_PRODUCTS = [
@@ -351,7 +352,7 @@ function analyzeCase(c, ep){
   // Missing validation: invalid input accepted with 2xx
   if(invalidInput && c.status>=200 && c.status<300){
     add('Medium','Missing Validation','Invalid input accepted (HTTP '+c.status+')',
-      'Fuzzed '+c.field+' = '+JSON.stringify(c.mutatedValue).slice(0,150)+' → HTTP '+c.status+' (expected 4xx)',
+      'Fuzzed '+c.field+' = '+fmtValue(c.mutatedValue).slice(0,150)+' → HTTP '+c.status+' (expected 4xx)',
       'Add server-side validation: type checks, range checks (e.g. age 0–150), required fields, and format validation. Return 400 with a clear error for invalid input.');
   }
   // Status mismatch vs expected success, only for non-malformed normal requests.
@@ -370,9 +371,13 @@ function analyzeCase(c, ep){
 
 /* ---------- Views ---------- */
 function showView(name){
+  const view=$('view-'+name); if(!view) return;
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
-  $('view-'+name).classList.add('active');
-  document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active', n.dataset.view===name));
+  view.classList.add('active');
+  document.querySelectorAll('.nav-item, .mobile-nav-item').forEach(n=>{
+    const active=n.dataset.view===name; n.classList.toggle('active',active);
+    if(active) n.setAttribute('aria-current','page'); else n.removeAttribute('aria-current');
+  });
   window.scrollTo({top:0,behavior:'smooth'});
   if(name==='dashboard') renderDashboard();
   if(name==='endpoints') renderEndpoints();
@@ -548,46 +553,57 @@ async function runFuzz(){
   if(!Object.values(strategies).some(Boolean)){ toast('⚠️ Enable at least one strategy'); return; }
 
   const mutations = generateMutations(ep, strategies, rng, $('fuzzQuery').checked, $('fuzzHeaders').checked);
-  // Iterations means requests sent, even when the finite mutation dictionary is smaller.
   if(!mutations.length){ toast('⚠️ No fuzzable inputs — add a body template or enable query/header fuzzing'); return; }
+  // Iterations means requests sent, even when the finite mutation dictionary is smaller.
   const plan = Array.from({length:count}, (_, i) => clone(mutations[i % mutations.length]));
 
   fuzzRunning=true; stopRequested=false; currentRunId=uid();
   $('btnRunFuzz').style.display='none'; $('btnStopFuzz').style.display='inline-block';
-  $('progressWrap').style.display='block';
+  $('progressWrap').style.display='block'; $('progressFill').style.width='0%';
+  $('progressText').textContent='Preparing '+plan.length+' cases…';
   $('liveLog').innerHTML='';
   const runStart = new Date();
-  let done=0, passed=0, failed=0;
+  let done=0, passed=0, failed=0, runError=null;
   const runFindings=[];
 
-  for(const m of plan){
-    if(stopRequested) break;
-    const res = await executeRequest(ep, m.body, m.query, m.headers, ep.timeout);
-    const verdict = res.error ? 'fail' : (res.status>=500||res.status===0 ? 'fail' : (res.status>=200&&res.status<300 ? 'pass':'warn'));
-    const c = { id:uid(), runId:currentRunId, endpointId:ep.id, endpointName:ep.name,
-      strategy:m.strategy, field:m.field, mutatedValue:m.value, input:m.body, query:m.query,
-      status:res.status, timeMs:res.timeMs, responseBody:res.body, error:res.error, verdict,
-      timestamp:new Date().toISOString() };
-    cases.unshift(c); if(cases.length>1000) cases=cases.slice(0,1000);
-    const f = analyzeCase(c, ep);
-    f.forEach(x=>{ findings.unshift(x); runFindings.push(x); });
-    if(verdict==='pass') passed++; else if(verdict==='fail') failed++;
-    done++;
-    appendLog(c, f);
-    $('progressFill').style.width = Math.round(done/plan.length*100)+'%';
-    $('progressText').textContent = done+' / '+plan.length+'  •  '+passed+' pass • '+failed+' fail • '+runFindings.length+' findings';
-    $('liveCount').textContent = done+' cases';
-    if(delay) await sleep(delay);
+  try{
+    for(const m of plan){
+      if(stopRequested) break;
+      const res = await executeRequest(ep, m.body, m.query, m.headers, ep.timeout);
+      const verdict = res.error ? 'fail' : (res.status>=500||res.status===0 ? 'fail' : (res.status>=200&&res.status<300 ? 'pass':'warn'));
+      const c = { id:uid(), runId:currentRunId, endpointId:ep.id, endpointName:ep.name,
+        strategy:m.strategy, field:m.field, mutatedValue:m.value, input:m.body, query:m.query, headers:m.headers,
+        status:res.status, timeMs:res.timeMs, responseBody:res.body, error:res.error, verdict,
+        timestamp:new Date().toISOString() };
+      cases.unshift(c); if(cases.length>1000) cases=cases.slice(0,1000);
+      const f = analyzeCase(c, ep);
+      f.forEach(x=>{ findings.unshift(x); runFindings.push(x); });
+      if(verdict==='pass') passed++; else if(verdict==='fail') failed++;
+      done++;
+      appendLog(c, f);
+      $('progressFill').style.width = Math.round(done/plan.length*100)+'%';
+      $('progressText').textContent = done+' / '+plan.length+'  •  '+passed+' pass • '+failed+' fail • '+runFindings.length+' findings';
+      $('liveCount').textContent = done+' cases';
+      if(delay && !stopRequested) await sleep(delay);
+    }
+  }catch(error){
+    runError=error;
+    console.error('Fuzz run stopped unexpectedly:',error);
+  }finally{
+    runs.unshift({ id:currentRunId, endpointName:ep.name, endpointUrl:ep.url, total:done, passed, failed,
+      findings:runFindings.length, seed, startedAt:runStart.toISOString(), finishedAt:new Date().toISOString(),
+      stopped:stopRequested, error:runError ? String(runError.message||runError) : null });
+    if(runs.length>50) runs=runs.slice(0,50);
+    persistAll();
+    try{ renderCases(); renderReports(); renderDashboard(); updateSidebar(); }
+    catch(renderError){ console.error('Could not refresh test results:',renderError); }
+    fuzzRunning=false;
+    $('btnRunFuzz').style.display='inline-block'; $('btnStopFuzz').style.display='none';
+    toast(runError ? '⚠️ Run ended early after '+done+' cases: '+String(runError.message||runError).slice(0,100)
+      : stopRequested ? '⏹ Fuzz run stopped after '+done+' cases'
+      : '✅ Fuzz run complete: '+done+' cases, '+runFindings.length+' findings');
+    if(done) showView('reports');
   }
-
-  runs.unshift({ id:currentRunId, endpointName:ep.name, endpointUrl:ep.url, total:done, passed, failed,
-    findings:runFindings.length, seed, startedAt:runStart.toISOString(), finishedAt:new Date().toISOString() });
-  if(runs.length>50) runs=runs.slice(0,50);
-  persistAll(); renderCases(); renderReports(); renderDashboard(); updateSidebar();
-  fuzzRunning=false;
-  $('btnRunFuzz').style.display='inline-block'; $('btnStopFuzz').style.display='none';
-  toast(stopRequested ? '⏹ Fuzz run stopped' : '✅ Fuzz run complete: '+done+' cases, '+runFindings.length+' findings');
-  showView('reports');
 }
 function stopFuzz(){ stopRequested=true; }
 function appendLog(c, f){
@@ -596,7 +612,7 @@ function appendLog(c, f){
   const div=document.createElement('div'); div.className='log-line';
   const st = c.error ? '<span class="status-err">ERR</span>' : '<span class="'+statusClass(c.status)+'">'+c.status+'</span>';
   const v = c.verdict==='pass' ? '<span class="badge pass">PASS</span>' : c.verdict==='fail' ? '<span class="badge fail">FAIL</span>' : '<span class="badge warn">WARN</span>';
-  div.innerHTML = `<span>#${esc(c.strategy)}</span><span>${esc(c.field)}=${esc(JSON.stringify(c.mutatedValue)).slice(0,60)}</span>${st}<span>${fmtTime(c.timeMs)}</span>${v}${f.length?'<span class="badge high">'+f.length+' finding(s)</span>':''}`;
+  div.innerHTML = `<span>#${esc(c.strategy)}</span><span>${esc(c.field)}=${esc(fmtValue(c.mutatedValue)).slice(0,60)}</span>${st}<span>${fmtTime(c.timeMs)}</span>${v}${f.length?'<span class="badge high">'+f.length+' finding(s)</span>':''}`;
   log.prepend(div);
   while(log.children.length>120) log.lastChild.remove();
 }
@@ -607,7 +623,7 @@ function renderCases(){
     <tr>
       <td>${cases.length-i}</td>
       <td><span class="badge info">${esc(c.strategy)}</span></td>
-      <td class="mono-sm">${esc(c.field)} = ${esc(JSON.stringify(c.mutatedValue)).slice(0,90)}</td>
+      <td class="mono-sm">${esc(c.field)} = ${esc(fmtValue(c.mutatedValue)).slice(0,90)}</td>
       <td>${c.error?'<span class="status-err">ERR</span>':'<span class="'+statusClass(c.status)+'">'+c.status+'</span>'}</td>
       <td>${fmtTime(c.timeMs)}</td>
       <td>${c.verdict==='pass'?'<span class="badge pass">PASS</span>':c.verdict==='fail'?'<span class="badge fail">FAIL</span>':'<span class="badge warn">WARN</span>'}</td>
@@ -618,10 +634,10 @@ function viewCase(id){
   const c=cases.find(x=>x.id===id); if(!c) return;
   $('modalTitle').textContent='Test Case — '+c.strategy;
   $('modalBody').innerHTML = `
-    <p><b>Endpoint:</b> ${esc(c.endpointName)}<br><b>Field:</b> <code>${esc(c.field)}</code> = <code>${esc(JSON.stringify(c.mutatedValue))}</code><br>
+    <p><b>Endpoint:</b> ${esc(c.endpointName)}<br><b>Field:</b> <code>${esc(c.field)}</code> = <code>${esc(fmtValue(c.mutatedValue))}</code><br>
     <b>Status:</b> ${c.error?esc(c.error):c.status} &nbsp; <b>Time:</b> ${fmtTime(c.timeMs)} &nbsp; <b>Verdict:</b> ${c.verdict}</p>
-    <h4 style="margin-top:12px">Request body</h4><pre>${esc(JSON.stringify(c.input,null,2))}</pre>
-    <h4>Response</h4><pre>${esc(JSON.stringify(c.responseBody,null,2) ?? c.error ?? '')}</pre>`;
+    <h4 style="margin-top:12px">Request body</h4><pre>${esc(fmtValue(c.input,2))}</pre>
+    <h4>Response</h4><pre>${esc(fmtValue(c.responseBody,2) ?? c.error ?? '')}</pre>`;
   $('modalOverlay').classList.add('open');
 }
 function closeModal(){ $('modalOverlay').classList.remove('open'); }
@@ -633,7 +649,7 @@ async function replayFailures(){
   let fixed=0;
   for(const c of failedCases.slice(0,50)){
     const ep=endpoints.find(e=>e.id===c.endpointId); if(!ep) continue;
-    const res=await executeRequest(ep, c.input, c.query||{}, {}, ep.timeout);
+    const res=await executeRequest(ep, c.input, c.query||{}, c.headers||ep.headers||{}, ep.timeout);
     if(!res.error && res.status<500) fixed++;
     await sleep(60);
   }
