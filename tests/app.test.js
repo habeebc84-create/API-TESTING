@@ -56,6 +56,18 @@ test('SQL injection demo payload is detected and reflected independently of cras
   assert.ok(findings.some(f => f.type === 'SQL Injection Risk'));
 });
 
+test('demo slow-response latency reaches the executor and performance analyzer', async () => {
+  const app = loadApp();
+  app.testHooks.bugs.slow = true;
+  const ep = { id:'users', name:'Create User', method:'POST', url:'demo://users', timeout:5000, expected:201, headers:{}, authType:'none' };
+  const input = { name:'Alice', age:100001, email:'alice@example.com' };
+  const response = await app.executeRequest(ep, input, {}, {}, ep.timeout);
+  assert.equal(response.status, 200);
+  assert.ok(response.timeMs >= 2000);
+  const findings = app.analyzeCase({ id:'slow1', strategy:'boundary', field:'body.age', mutatedValue:100001, input, status:response.status, timeMs:response.timeMs, responseBody:response.body, error:null }, ep);
+  assert.ok(findings.some(f => f.type === 'Performance'));
+});
+
 test('mutation generation is deterministic for the same seed and honors strategies', () => {
   const app = loadApp();
   const endpoint = { body: '{"age":25,"name":"Alice"}', query: 'page=1', headers: 'X-Test: ok' };

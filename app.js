@@ -155,7 +155,9 @@ async function executeRequest(ep, bodyObj, queryObj, headersObj, timeoutMs){
     await sleep(10 + Math.random()*30);
     const res = handleDemo(method, path, queryObj||{}, bodyObj);
     return { status:res.status, body:res.body, headers:{'content-type':'application/json','x-demo':'true'},
-             timeMs: Math.round(performance.now()-start), error:null, url };
+             // Demo responses carry their simulated latency; include it so slow-response
+             // bugs are reported consistently even though the simulator runs locally.
+             timeMs: Math.max(Math.round(performance.now()-start), Number(res.timeMs)||0), error:null, url };
   }
 
   const ctrl = new AbortController();
