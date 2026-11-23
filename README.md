@@ -83,8 +83,10 @@ index.html      — App UI (Dashboard, Module 1/2/3 views, Demo API, Help)
 style.css       — Dark modern theme (responsive, print-ready)
 app.js          — All logic: store, Demo API simulator, fuzz engine, analyzer, reports
 server.js       — Optional loopback-only CORS proxy for real APIs (Node 18+, Express)
-package.json    — Optional proxy dependencies and run script
-vercel.json     — Vercel deployment config (static, no build)
+package.json    — Build, test and proxy scripts plus proxy dependencies
+scripts/build.js — Copies index.html, app.js and style.css into public/ for Vercel
+tests/app.test.js — Built-in checks (run with `npm test`)
+vercel.json     — Vercel deployment config (runs `npm run build`, serves public/)
 ```
 
 All data (endpoints, cases, findings, runs, and demo bug toggles) is stored in the browser's `localStorage`. Use **Dashboard → Export All Data** to back up as JSON. Run the built-in checks with `npm test`.
