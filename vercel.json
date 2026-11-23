@@ -1,4 +1,7 @@
 {
-  "framework": null,
-  "outputDirectory": "dist"
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "npm run build",
+  "outputDirectory": "public",
+  "cleanUrls": true,
+  "trailingSlash": false
 }

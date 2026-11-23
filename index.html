@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CASTONE — Automated API Testing Using Fuzz Testing</title>
+<meta name="description" content="Automated API testing and fuzzing with CASTONE. Configure endpoints, generate fuzz inputs, analyze vulnerabilities, and export reports.">
+<meta name="theme-color" content="#090e18">
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+</head>
+<body>
+
+<!-- ============ HEADER ============ -->
+<header class="topbar">
+  <div class="brand">
+    <div class="logo">⚡</div>
+    <div>
+      <div class="brand-title">CASTONE <span class="brand-sub">API Fuzz Tester</span></div>
+      <div class="brand-tag">Automated API Testing Using Fuzz Testing</div>
+    </div>
+  </div>
+  <div class="top-actions">
+    <span class="pill pill-demo" id="demoBadge">● Demo API: <b>ON</b></span>
+    <button class="btn btn-ghost btn-sm" onclick="showView('help')">📖 Docs</button>
+    <button class="btn btn-primary btn-sm" onclick="showView('fuzz')">▶ Run Fuzz Test</button>
+  </div>
+</header>
+
+<div class="layout">
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar">
+    <div class="nav-label">MAIN</div>
+    <button class="nav-item active" data-view="dashboard" aria-current="page" onclick="showView('dashboard')"><span>🏠</span> Dashboard</button>
+    <button class="nav-item" data-view="endpoints" onclick="showView('endpoints')"><span>🔌</span> Endpoints <span class="nav-count" id="navEndpointCount">0</span></button>
+    <button class="nav-item" data-view="fuzz" onclick="showView('fuzz')"><span>🧪</span> Fuzz Engine</button>
+    <button class="nav-item" data-view="reports" onclick="showView('reports')"><span>📊</span> Findings & Reports <span class="nav-count nav-alert" id="navFindingCount" style="display:none">0</span></button>
+
+    <div class="nav-label">CASTONE MODULES</div>
+    <div class="module-card">
+      <div class="module-num">1</div>
+      <div><b>API Configuration</b><p>Endpoints, auth, OpenAPI import</p></div>
+    </div>
+    <div class="module-card">
+      <div class="module-num">2</div>
+      <div><b>Fuzz Testing Engine</b><p>Random, boundary & mutation inputs</p></div>
+    </div>
+    <div class="module-card">
+      <div class="module-num">3</div>
+      <div><b>Detection & Reporting</b><p>Severity, PDF / CSV reports</p></div>
+    </div>
+
+    <div class="nav-label">TOOLS</div>
+    <button class="nav-item" data-view="demoapi" onclick="showView('demoapi')"><span>🎯</span> Demo Target API</button>
+    <button class="nav-item" data-view="help" onclick="showView('help')"><span>❓</span> Help & How It Works</button>
+
+    <div class="sidebar-footer">
+      <div class="stat-mini"><span>Endpoints</span><b id="sideEndpoints">0</b></div>
+      <div class="stat-mini"><span>Tests run</span><b id="sideTests">0</b></div>
+      <div class="stat-mini"><span>Findings</span><b id="sideFindings">0</b></div>
+    </div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <main class="main" id="mainContent">
+
+    <!-- ===== VIEW: DASHBOARD ===== -->
+    <section class="view active" id="view-dashboard">
+      <div class="page-head">
+        <div>
+          <h1>Dashboard</h1>
+          <p>Automated API Testing Using Fuzz Testing — evaluate reliability, robustness & security of APIs.</p>
+        </div>
+        <div class="head-actions">
+          <button class="btn btn-ghost" onclick="exportAllData()">⬇ Export All Data</button>
+          <button class="btn btn-primary" onclick="quickStart()">⚡ Quick Start Demo</button>
+        </div>
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat-card"><div class="stat-icon blue">🔌</div><div><div class="stat-num" id="statEndpoints">0</div><div class="stat-label">Configured Endpoints</div></div></div>
+        <div class="stat-card"><div class="stat-icon purple">🧪</div><div><div class="stat-num" id="statTests">0</div><div class="stat-label">Fuzz Tests Executed</div></div></div>
+        <div class="stat-card"><div class="stat-icon red">🚨</div><div><div class="stat-num" id="statFindings">0</div><div class="stat-label">Findings Detected</div></div></div>
+        <div class="stat-card"><div class="stat-icon green">✅</div><div><div class="stat-num" id="statPassRate">—</div><div class="stat-label">Pass Rate</div></div></div>
+      </div>
+
+      <div class="grid-3">
+        <div class="card module-hero">
+          <div class="module-badge">MODULE 1</div>
+          <h3>🔌 API Configuration & Endpoint Management</h3>
+          <p>Add REST endpoints (GET / POST / PUT / PATCH / DELETE), headers, query params, bodies, authentication, OpenAPI import & connectivity validation.</p>
+          <button class="btn btn-outline" onclick="showView('endpoints')">Configure Endpoints →</button>
+        </div>
+        <div class="card module-hero">
+          <div class="module-badge">MODULE 2</div>
+          <h3>🧪 Automated Fuzz Testing Engine</h3>
+          <p>Generates random, malformed, boundary-value & mutated inputs. Executes requests with timeouts & rate limits. Records everything for reproducibility.</p>
+          <button class="btn btn-outline" onclick="showView('fuzz')">Open Fuzz Engine →</button>
+        </div>
+        <div class="card module-hero">
+          <div class="module-badge">MODULE 3</div>
+          <h3>📊 Vulnerability Detection & Reporting</h3>
+          <p>Detects 5xx errors, timeouts, missing validation & info leaks. Classifies severity and generates CSV / PDF reports with recommendations.</p>
+          <button class="btn btn-outline" onclick="showView('reports')">View Reports →</button>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-head"><h3>📈 Response Status Distribution</h3><span class="muted">All runs</span></div>
+          <div id="dashChart" class="chart-box"><p class="empty">No test data yet. Run a fuzz test to see results here.</p></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h3>🕘 Recent Test Runs</h3><button class="btn btn-ghost btn-sm" onclick="clearHistory()">Clear</button></div>
+          <div id="recentRuns"><p class="empty">No runs yet.</p></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h3>🎯 How it works</h3></div>
+        <div class="steps">
+          <div class="step"><div class="step-num">1</div><b>Configure</b><p>Add an endpoint or import OpenAPI. Validate connectivity.</p></div>
+          <div class="step-arrow">→</div>
+          <div class="step"><div class="step-num">2</div><b>Fuzz</b><p>Engine generates boundary, null, type-confusion & random inputs and executes them.</p></div>
+          <div class="step-arrow">→</div>
+          <div class="step"><div class="step-num">3</div><b>Analyze</b><p>Responses are checked for 5xx, leaks, missing validation & anomalies.</p></div>
+          <div class="step-arrow">→</div>
+          <div class="step"><div class="step-num">4</div><b>Report</b><p>Export CSV / PDF with severity, evidence & fix recommendations.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== VIEW: ENDPOINTS (Module 1) ===== -->
+    <section class="view" id="view-endpoints">
+      <div class="page-head">
+        <div>
+          <h1>Module 1 — API Configuration</h1>
+          <p>Add and manage REST API endpoints. Save configurations for future test runs.</p>
+        </div>
+        <div class="head-actions">
+          <button class="btn btn-ghost" onclick="document.getElementById('openapiFile').click()">📥 Import OpenAPI</button>
+          <input type="file" id="openapiFile" accept=".json" style="display:none" onchange="importOpenAPIFile(event)">
+          <button class="btn btn-ghost" onclick="openOpenAPIPaste()">📋 Paste OpenAPI</button>
+          <button class="btn btn-primary" onclick="newEndpoint()">＋ New Endpoint</button>
+        </div>
+      </div>
+
+      <div class="grid-2-wide">
+        <!-- Endpoint list -->
+        <div class="card">
+          <div class="card-head"><h3>Saved Endpoints</h3><span class="muted" id="endpointCountLabel"></span></div>
+          <div id="endpointList"><p class="empty">No endpoints yet. Add one or import OpenAPI.</p></div>
+        </div>
+
+        <!-- Editor -->
+        <div class="card" id="editorCard">
+          <div class="card-head"><h3 id="editorTitle">Endpoint Editor</h3><span class="muted">All fields saved locally</span></div>
+          <form id="endpointForm" onsubmit="return saveEndpoint(event)">
+            <input type="hidden" id="f_id">
+            <label>Endpoint Name</label>
+            <input id="f_name" placeholder="e.g. Create User" required>
+            <div class="row-2">
+              <div><label>HTTP Method</label>
+                <select id="f_method">
+                  <option>GET</option><option>POST</option><option>PUT</option><option>PATCH</option><option>DELETE</option>
+                </select>
+              </div>
+              <div><label>Timeout (ms)</label><input id="f_timeout" type="number" value="5000" min="500" max="60000"></div>
+            </div>
+            <label>URL</label>
+            <input id="f_url" placeholder="https://api.example.com/users  or  demo://users" required>
+            <p class="hint">Use <code>demo://users</code>, <code>demo://products</code>, <code>demo://login</code>, <code>demo://search</code> to test against the built-in Demo API.</p>
+
+            <div class="row-2">
+              <div><label>Authentication</label>
+                <select id="f_authType" onchange="toggleAuthFields()">
+                  <option value="none">None</option>
+                  <option value="bearer">Bearer Token</option>
+                  <option value="basic">Basic Auth</option>
+                  <option value="apikey">API Key (Header)</option>
+                </select>
+              </div>
+              <div id="authFieldWrap"><label id="authFieldLabel">Token / Key / Password</label><input id="f_authValue" placeholder="Optional"></div>
+            </div>
+
+            <label>Headers (one per line: <code>Key: Value</code>)</label>
+            <textarea id="f_headers" rows="2" placeholder="Content-Type: application/json&#10;X-Custom: value"></textarea>
+
+            <label>Query Parameters (one per line: <code>key=value</code>)</label>
+            <textarea id="f_query" rows="2" placeholder="page=1&#10;limit=10"></textarea>
+
+            <label>Request Body (JSON template — fuzzed fields are mutated)</label>
+            <textarea id="f_body" rows="5" placeholder='{"name":"Alice","age":25,"email":"alice@example.com"}'></textarea>
+            <p class="hint">The fuzzer mutates each field in this JSON. Leave empty for GET requests.</p>
+
+            <div class="row-2">
+              <div><label>Expected Success Status</label><input id="f_expected" type="number" value="200" min="100" max="599"></div>
+              <div><label>Description</label><input id="f_desc" placeholder="What does this endpoint do?"></div>
+            </div>
+
+            <div class="form-actions">
+              <button type="button" class="btn btn-ghost" onclick="validateConnectivity()">🔍 Validate Connectivity</button>
+              <button type="button" class="btn btn-ghost" onclick="deleteEndpoint()" id="btnDelete" style="display:none">🗑 Delete</button>
+              <button type="submit" class="btn btn-primary">💾 Save Endpoint</button>
+            </div>
+            <div id="connectResult" class="connect-result"></div>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== VIEW: FUZZ ENGINE (Module 2) ===== -->
+    <section class="view" id="view-fuzz">
+      <div class="page-head">
+        <div>
+          <h1>Module 2 — Fuzz Testing Engine</h1>
+          <p>Generates random, malformed & boundary-value inputs and executes them against your endpoint.</p>
+        </div>
+      </div>
+
+      <div class="grid-2-wide">
+        <div class="card">
+          <div class="card-head"><h3>⚙️ Fuzz Configuration</h3></div>
+          <label>Target Endpoint</label>
+          <select id="fuzzTarget" onchange="onFuzzTargetChange()"></select>
+
+          <div class="row-3">
+            <div><label>Iterations</label><input id="fuzzCount" type="number" value="30" min="1" max="500"></div>
+            <div><label>Delay (ms)</label><input id="fuzzDelay" type="number" value="120" min="0" max="5000"></div>
+            <div><label>Seed (reproducible)</label><input id="fuzzSeed" type="number" value="42"></div>
+          </div>
+
+          <label>Fuzzing Strategies</label>
+          <div class="check-grid">
+            <label class="check"><input type="checkbox" id="strat_boundary" checked> Boundary values <span>(-1, 0, MAX, empty)</span></label>
+            <label class="check"><input type="checkbox" id="strat_null" checked> Null / missing / empty fields</label>
+            <label class="check"><input type="checkbox" id="strat_type" checked> Type confusion <span>("abc" for number)</span></label>
+            <label class="check"><input type="checkbox" id="strat_random" checked> Random strings / numbers / booleans</label>
+            <label class="check"><input type="checkbox" id="strat_special" checked> Special chars, SQLi, XSS, unicode</label>
+            <label class="check"><input type="checkbox" id="strat_mutation" checked> JSON structure mutation</label>
+          </div>
+
+          <label>Also fuzz</label>
+          <div class="check-grid">
+            <label class="check"><input type="checkbox" id="fuzzQuery"> Query parameters</label>
+            <label class="check"><input type="checkbox" id="fuzzHeaders"> Header values</label>
+          </div>
+
+          <div class="form-actions">
+            <button class="btn btn-primary btn-lg" id="btnRunFuzz" onclick="runFuzz()">▶ Start Fuzz Test</button>
+            <button class="btn btn-danger btn-lg" id="btnStopFuzz" onclick="stopFuzz()" style="display:none">⏹ Stop</button>
+          </div>
+          <p class="hint">Example: if the API accepts <code>age</code>, the engine tests <code>20, -1, 0, "abc", null</code> to verify validation.</p>
+
+          <div class="progress-wrap" id="progressWrap" style="display:none">
+            <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+            <div class="progress-text" id="progressText">0 / 0</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><h3>📡 Live Execution Log</h3><span class="muted" id="liveCount">0 cases</span></div>
+          <div class="log-box" id="liveLog"><p class="empty">Press “Start Fuzz Test” to begin. Each case shows input → status → time → verdict.</p></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h3>🧾 Executed Test Cases</h3>
+          <div>
+            <button class="btn btn-ghost btn-sm" onclick="exportCasesCSV()">⬇ CSV</button>
+            <button class="btn btn-ghost btn-sm" onclick="exportCasesJSON()">⬇ JSON</button>
+            <button class="btn btn-ghost btn-sm" onclick="clearCases()">Clear</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>#</th><th>Strategy</th><th>Input (mutated field)</th><th>Status</th><th>Time</th><th>Verdict</th><th>Action</th></tr></thead>
+            <tbody id="casesBody"><tr><td colspan="7" class="empty">No test cases yet.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== VIEW: REPORTS (Module 3) ===== -->
+    <section class="view" id="view-reports">
+      <div class="page-head">
+        <div>
+          <h1>Module 3 — Detection & Reporting</h1>
+          <p>Findings classified by severity with evidence and recommended corrective actions.</p>
+        </div>
+        <div class="head-actions">
+          <button class="btn btn-ghost" onclick="exportFindingsCSV()">⬇ CSV Report</button>
+          <button class="btn btn-ghost" onclick="exportFindingsJSON()">⬇ JSON Report</button>
+          <button class="btn btn-primary" onclick="window.print()">🖨 Print / PDF</button>
+        </div>
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat-card"><div class="stat-icon red">🔴</div><div><div class="stat-num" id="sevCritical">0</div><div class="stat-label">Critical</div></div></div>
+        <div class="stat-card"><div class="stat-icon orange">🟠</div><div><div class="stat-num" id="sevHigh">0</div><div class="stat-label">High</div></div></div>
+        <div class="stat-card"><div class="stat-icon yellow">🟡</div><div><div class="stat-num" id="sevMedium">0</div><div class="stat-label">Medium</div></div></div>
+        <div class="stat-card"><div class="stat-icon blue">🔵</div><div><div class="stat-num" id="sevLow">0</div><div class="stat-label">Low / Info</div></div></div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card"><div class="card-head"><h3>Findings by Severity</h3></div><div id="sevChart" class="chart-box"><p class="empty">No findings yet.</p></div></div>
+        <div class="card"><div class="card-head"><h3>Findings by Type</h3></div><div id="typeChart" class="chart-box"><p class="empty">No findings yet.</p></div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h3>🚨 Findings</h3>
+          <div class="filter-row">
+            <select id="filterSeverity" onchange="renderFindings()"><option value="">All severities</option><option>Critical</option><option>High</option><option>Medium</option><option>Low</option></select>
+            <select id="filterType" onchange="renderFindings()"><option value="">All types</option></select>
+            <button class="btn btn-ghost btn-sm" onclick="replayFailures()">🔁 Replay Failures (Regression)</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Severity</th><th>Finding</th><th>Endpoint</th><th>Evidence</th><th>Recommendation</th><th></th></tr></thead>
+            <tbody id="findingsBody"><tr><td colspan="6" class="empty">No findings. Run a fuzz test first.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card" id="reportSummaryCard">
+        <div class="card-head"><h3>📄 Executive Summary</h3><button class="btn btn-ghost btn-sm" onclick="copySummary()">📋 Copy Summary</button></div>
+        <div id="reportSummary"><p class="empty">Run a fuzz test to generate a summary.</p></div>
+      </div>
+    </section>
+
+    <!-- ===== VIEW: DEMO API ===== -->
+    <section class="view" id="view-demoapi">
+      <div class="page-head">
+        <div>
+          <h1>🎯 Demo Target API</h1>
+          <p>A built-in vulnerable API so you can demo fuzzing instantly — no server needed. Toggle bugs to show “before vs after fix”.</p>
+        </div>
+        <span class="pill pill-demo">● Simulator: <b>ON</b></span>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h3>🐛 Intentional Vulnerabilities (toggle to fix)</h3></div>
+        <div class="check-grid">
+          <label class="check"><input type="checkbox" id="bug_age" checked onchange="saveBugs()"> <b>Missing age validation</b> <span>Accepts negative / huge ages (should be 400)</span></label>
+          <label class="check"><input type="checkbox" id="bug_sqli" checked onchange="saveBugs()"> <b>SQL injection reflection</b> <span>Reflects input unsanitized in response</span></label>
+          <label class="check"><input type="checkbox" id="bug_crash" checked onchange="saveBugs()"> <b>500 crash on special chars</b> <span>Emoji / unicode triggers server error</span></label>
+          <label class="check"><input type="checkbox" id="bug_leak" checked onchange="saveBugs()"> <b>Stack-trace leak</b> <span>Returns internal error details</span></label>
+          <label class="check"><input type="checkbox" id="bug_slow" checked onchange="saveBugs()"> <b>Slow response on large input</b> <span>Performance issue (&gt;2s)</span></label>
+          <label class="check"><input type="checkbox" id="bug_xss" checked onchange="saveBugs()"> <b>XSS reflection</b> <span>Reflected &lt;script&gt; without encoding</span></label>
+        </div>
+        <p class="hint">Turn all OFF and re-run fuzzing — findings should drop to near zero. Great for live demos & regression testing.</p>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-head"><h3>Endpoints</h3></div>
+          <table class="data-table">
+            <thead><tr><th>Method</th><th>URL</th><th>Purpose</th></tr></thead>
+            <tbody>
+              <tr><td><span class="method post">POST</span></td><td><code>demo://users</code></td><td>Create user {name, age, email}</td></tr>
+              <tr><td><span class="method get">GET</span></td><td><code>demo://products</code></td><td>List products (?page, ?limit)</td></tr>
+              <tr><td><span class="method post">POST</span></td><td><code>demo://login</code></td><td>Login {username, password}</td></tr>
+              <tr><td><span class="method get">GET</span></td><td><code>demo://search</code></td><td>Search (?q)</td></tr>
+            </tbody>
+          </table>
+          <div class="form-actions"><button class="btn btn-primary" onclick="loadDemoEndpoints()">⬇ Load Demo Endpoints</button></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h3>🧪 Try It Manually</h3></div>
+          <label>Endpoint</label>
+          <select id="manualEndpoint"></select>
+          <label>Body / Query (JSON or key=value)</label>
+          <textarea id="manualBody" rows="3">{"name":"Alice","age":25,"email":"alice@example.com"}</textarea>
+          <div class="form-actions"><button class="btn btn-primary" onclick="manualRequest()">Send Request</button></div>
+          <pre class="response-box" id="manualResponse">Response will appear here…</pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== VIEW: HELP ===== -->
+    <section class="view" id="view-help">
+      <div class="page-head"><div><h1>Help & How It Works</h1><p>Concepts, limitations, and presentation-ready explanations.</p></div></div>
+      <div class="grid-2">
+        <div class="card">
+          <h3>What is fuzz testing?</h3>
+          <p>Traditional testing uses predefined inputs. Fuzz testing generates <b>random, invalid, unexpected and boundary-value inputs</b> to find defects in how an API handles edge cases. This tool automates endpoint configuration, input generation, request execution, response analysis and report generation.</p>
+          <h3 style="margin-top:16px">Example</h3>
+          <p>If an API accepts an <code>age</code> field, the engine tests <code>20, -1, 0, "abc", null</code> to check whether validation works correctly.</p>
+          <h3 style="margin-top:16px">What the analyzer flags</h3>
+          <ul class="plain-list">
+            <li><b>5xx responses</b> — server crashes on bad input (Critical/High)</li>
+            <li><b>Timeouts / connection failures</b> (High)</li>
+            <li><b>Missing validation</b> — invalid input accepted with 2xx (Medium)</li>
+            <li><b>Info disclosure</b> — stack traces, SQL errors in response (High)</li>
+            <li><b>Injection reflection</b> — SQLi / XSS payload echoed back (High)</li>
+            <li><b>Inconsistent errors</b> — missing error format (Low)</li>
+            <li><b>Slow responses</b> — performance risk (Medium)</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>⚠️ Important limitations</h3>
+          <ul class="plain-list">
+            <li>This tool improves automation & coverage. It does <b>not guarantee detection of every vulnerability</b> — findings must be validated manually.</li>
+            <li>Only test APIs you own or have permission to test.</li>
+            <li>Browser-based testing may hit CORS on some real APIs. Use the Demo API, or run <code>npm run proxy</code> locally (see README). Cloud previews cannot access a proxy running on your own computer.</li>
+            <li>Stateful workflows (RESTler-style dependency chains) are future scope — this version fuzzes single requests deeply.</li>
+          </ul>
+          <h3 style="margin-top:16px">Keyboard & data</h3>
+          <p>All data is stored in your browser (<code>localStorage</code>). Use <b>Export All Data</b> on the Dashboard to back up endpoints, cases and findings as JSON.</p>
+          <h3 style="margin-top:16px">References</h3>
+          <ol class="plain-list">
+            <li>Atlidakis et al. (2019). RESTler: Stateful REST API Fuzzing. ICSE.</li>
+            <li>OWASP Foundation. Web Security Testing Guide.</li>
+            <li>RESTLess (2024). LLM-enhanced API fuzzing. IEEE TSC.</li>
+            <li>Microsoft. RESTler Fuzzer — GitHub.</li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+  </main>
+  <nav class="mobile-nav" aria-label="Main navigation">
+    <button class="mobile-nav-item active" data-view="dashboard" aria-current="page" onclick="showView('dashboard')"><span aria-hidden="true">🏠</span><small>Home</small></button>
+    <button class="mobile-nav-item" data-view="endpoints" onclick="showView('endpoints')"><span aria-hidden="true">🔌</span><small>Endpoints</small></button>
+    <button class="mobile-nav-item" data-view="fuzz" onclick="showView('fuzz')"><span aria-hidden="true">🧪</span><small>Fuzz</small></button>
+    <button class="mobile-nav-item" data-view="reports" onclick="showView('reports')"><span aria-hidden="true">📊</span><small>Reports</small></button>
+    <button class="mobile-nav-item" data-view="demoapi" onclick="showView('demoapi')"><span aria-hidden="true">🎯</span><small>Demo</small></button>
+    <button class="mobile-nav-item" data-view="help" onclick="showView('help')"><span aria-hidden="true">❔</span><small>Help</small></button>
+  </nav>
+</div>
+
+<!-- Detail modal -->
+<div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-head"><h3 id="modalTitle">Details</h3><button class="btn btn-ghost btn-sm" onclick="closeModal()">✕</button></div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
